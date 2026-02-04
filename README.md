@@ -27,70 +27,76 @@ To write a program to implement the the Logistic Regression Model to Predict the
 # Logistic Regression to Predict Placement Status of Students
 # Developed By: Jeensfer Jo
 # Register Number : 212225240058
+
 import pandas as pd
 import numpy as np
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, recall_score
+from sklearn.metrics import (
+    confusion_matrix,
+    accuracy_score,
+    classification_report
+)
 
+# --------------------------------------------------
 # 1. Load Dataset
-df = pd.read_csv("Placement_Data.csv") 
+# --------------------------------------------------
+df = pd.read_csv("Placement_Data.csv")
+
 print("Dataset Preview:")
 print(df.head())
 
+# --------------------------------------------------
 # 2. Data Preprocessing
-# Drop irrelevant column
+# --------------------------------------------------
+# Drop irrelevant columns
 df.drop(columns=['sl_no', 'salary'], inplace=True)
 
-# Encode categorical variables
-label_cols = [
-    'gender', 'ssc_b', 'hsc_b', 'hsc_s',
-    'degree_t', 'workex', 'specialisation', 'status'
-]
+# Separate features and target
+X = df.drop('status', axis=1)
+y = df['status']
 
-le = LabelEncoder()
-for col in label_cols:
-    df[col] = le.fit_transform(df[col])
--
-# 3. Split Features and Target
-X = df.drop('status', axis=1)   # input features
-y = df['status']                # target variable
+# One-hot encode categorical variables
+X = pd.get_dummies(X, drop_first=True)
 
-# 4. Train-Test Split
+# Encode target variable (Placed = 1, Not Placed = 0)
+y = y.map({'Not Placed': 0, 'Placed': 1})
+
+print("\nAfter Encoding:")
+print(X.head())
+
+# --------------------------------------------------
+# 3. Train-Test Split
+# --------------------------------------------------
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
-# 5. Train Logistic Regression Model
+# --------------------------------------------------
+# 4. Train Logistic Regression Model
+# --------------------------------------------------
 model = LogisticRegression(max_iter=1000)
 model.fit(X_train, y_train)
 
-# 6. Model Evaluation
+# --------------------------------------------------
+# 5. Model Evaluation
+# --------------------------------------------------
 y_pred = model.predict(X_test)
 
-cm = confusion_matrix(y_test, y_pred)
 accuracy = accuracy_score(y_test, y_pred)
-precision = precision_score(y_test, y_pred)
-recall = recall_score(y_test, y_pred)
+cm = confusion_matrix(y_test, y_pred)
 
-# Specificity calculation
-tn, fp, fn, tp = cm.ravel()
-specificity = tn / (tn + fp)
+print("\nAccuracy:", accuracy)
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
 
-print("\nConfusion Matrix:")
+print("Confusion Matrix:")
 print(cm)
 
-print("\nModel Performance:")
-print(f"Accuracy     : {accuracy:.2f}")
-print(f"Precision    : {precision:.2f}")
-print(f"Recall       : {recall:.2f}")
-print(f"Specificity  : {specificity:.2f}")
-
-
-# 7. Predict Placement for New Student
-
+# --------------------------------------------------
+# 6. Predict Placement for a New Student
+# --------------------------------------------------
 print("\nEnter new student details:")
 
 gender = input("Gender (M/F): ")
@@ -106,23 +112,28 @@ etest_p = float(input("E-test Percentage: "))
 specialisation = input("Specialisation (Mkt&HR/Mkt&Fin): ")
 mba_p = float(input("MBA Percentage: "))
 
-# Encode user input manually (same mapping as training)
-input_data = pd.DataFrame([[
-    1 if gender == 'M' else 0,
-    ssc_p,
-    1 if ssc_b == 'Central' else 0,
-    hsc_p,
-    1 if hsc_b == 'Central' else 0,
-    0 if hsc_s == 'Arts' else 1,
-    degree_p,
-    1 if degree_t == 'Sci&Tech' else 0,
-    1 if workex == 'Yes' else 0,
-    etest_p,
-    1 if specialisation == 'Mkt&Fin' else 0,
-    mba_p
-]], columns=X.columns)
+# Create input dataframe
+new_data = pd.DataFrame({
+    'ssc_p': [ssc_p],
+    'hsc_p': [hsc_p],
+    'degree_p': [degree_p],
+    'etest_p': [etest_p],
+    'mba_p': [mba_p],
+    'gender_M': [1 if gender == 'M' else 0],
+    'ssc_b_Others': [1 if ssc_b == 'Others' else 0],
+    'hsc_b_Others': [1 if hsc_b == 'Others' else 0],
+    'hsc_s_Commerce': [1 if hsc_s == 'Commerce' else 0],
+    'hsc_s_Science': [1 if hsc_s == 'Science' else 0],
+    'degree_t_Comm&Mgmt': [1 if degree_t == 'Comm&Mgmt' else 0],
+    'degree_t_Sci&Tech': [1 if degree_t == 'Sci&Tech' else 0],
+    'workex_Yes': [1 if workex == 'Yes' else 0],
+    'specialisation_Mkt&HR': [1 if specialisation == 'Mkt&HR' else 0]
+})
 
-prediction = model.predict(input_data)
+# Align columns with training data
+new_data = new_data.reindex(columns=X.columns, fill_value=0)
+
+prediction = model.predict(new_data)
 
 print("\nPlacement Prediction:")
 if prediction[0] == 1:
@@ -130,11 +141,13 @@ if prediction[0] == 1:
 else:
     print("Student is LIKELY to be NOT PLACED")
 
+
 ```
 
 ## Output:
-<img width="1000" height="583" alt="image" src="https://github.com/user-attachments/assets/1e93de53-0379-4879-8182-9a599b279719" />
-<img width="996" height="580" alt="image" src="https://github.com/user-attachments/assets/33dce6f2-22a9-40b4-a7a6-d01cac2de904" />
+<img width="1287" height="824" alt="image" src="https://github.com/user-attachments/assets/448b1f56-42a1-441c-8af0-f2078d5aaa43" />
+<img width="1284" height="820" alt="image" src="https://github.com/user-attachments/assets/4e47a31f-a473-4c31-ba99-fcd55c750f0c" />
+
 
 
 
